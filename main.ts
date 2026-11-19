@@ -11,7 +11,7 @@
 // Local run (mirrors the grader):
 //   mkdir -p out && MAKEFUN_BOT_DIR=. MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const botDir = process.env.MAKEFUN_BOT_DIR ?? '/bot';
@@ -33,5 +33,23 @@ if (typeof address !== 'object' || address === null || typeof address.url !== 's
   process.exit(1);
 }
 
+let postUrl: URL;
+try {
+  postUrl = new URL(address.url);
+} catch {
+  console.error(`POST.json "url" is not a valid URL: ${address.url}`);
+  process.exit(1);
+}
+
+const host = postUrl.hostname.toLowerCase();
+const isXHost = host === 'x.com' || host === 'twitter.com' || host.endsWith('.x.com') || host.endsWith('.twitter.com');
+if (postUrl.protocol !== 'https:' || !isXHost) {
+  console.error(`POST.json "url" must be an https URL on x.com or twitter.com, got: ${address.url}`);
+  process.exit(1);
+}
+
 mkdirSync(outputDir, { recursive: true });
-writeFileSync(target, JSON.stringify(address), 'utf8');
+// Copy the source file's exact bytes (formatting and trailing newline included)
+// rather than re-serializing the parsed value, so the gate reads exactly what
+// was recorded in the repository.
+copyFileSync(source, target);
